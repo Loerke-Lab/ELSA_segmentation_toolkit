@@ -10,7 +10,12 @@ function [imageFileList] = ELSA_1loadImageList(path, switchvar)
 %                  first and the section index last. If the indices are 
 %                  switched (or you as a user wish to switch them), 
 %                  indicate this by setting switchvar=1
-% Output:   filelist
+% Output:   imageFileList: cell array of complete image names
+%                   the results has a double index, where in the
+%                   position outputFileList{n,k}
+%                   n corresponds to the first index (time in the example
+%                   above, and k corresponds to the second index (zpos in
+%                   the example above)
 %
 % 03/05/2011 Dinah Loerke
 
