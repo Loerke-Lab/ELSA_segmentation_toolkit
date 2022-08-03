@@ -21,41 +21,45 @@ function [outputFileList]=getFileStackNames_two(firstfilename,secondfilename)
 %               n corresponds to the first index (time in the example
 %               above, and k corresponds to the second index (zpos in
 %               the example above)
-%                          
-%
-% DEPENDENCES
 %
 % Aaron Ponti, October 4th, 2002
 % modified Dinah Loerke, Sept 2010
 
+% create empty array for oldDir
 oldDir = [];
 
-% Output
+% create empty array for outputFileList
 outputFileList = {};
 
 % first file name segmentation
 [fpath1,fname1,fno1,fext1]=getFilenameBody(firstfilename);
 
+% create error if firstfilename is not specified
 if(isempty(fname1) | isempty(fno1) | isempty(fext1) )
    error('invalid first filename specified');
-end;
+end
 
 % second file name segmentation
 [fpath2,fname2,fno2,fext2]=getFilenameBody(secondfilename);
 
+% create error if secondfilename is not specified
 if(isempty(fname2) | isempty(fno2) | isempty(fext2) )
    error('invalid second filename specified');
-end;
+end
 
+% segmentation of the two image names fname1 and fname2
 [body,no1,no2,bridge]=getFilenameBody_two(fname1,fname2);
 
+% compare strings fpath1 and fpath2
+% if they are equivalent set fpath, if not throw an error
 if strcmp(fpath1,fpath2)
     fpath = fpath1;
 else
     error('paths don''t match');
 end
 
-
+% compare strings fext1 and fext2
+% if they are equivalent set fext, if not throw an error
 if strcmp(fext1,fext1)
     fext = fext1;
 else
@@ -63,7 +67,7 @@ else
 end
 
 
-
+% check if fpath is present and change the diretory to that path
 if(~isempty(fpath))
 	% change to stack directory
    oldDir = cd(fpath);
@@ -73,9 +77,10 @@ else
    if(~isempty(tempName))
       [fpath,fname,fno1,fext]=getFilenameBody(tempName);
       oldDir = cd(fpath);
-	end;
-end;
+   end
+end
 
+% list files and folders in the current folder
 dirListing = dir;
 
 % get all relevant filenames in the specified directory
@@ -85,13 +90,14 @@ for( i = 1:length(dirListing))
    if(~dirListing(i).isdir)
       fileList(iEntry) = lower({dirListing(i).name});
       iEntry = iEntry + 1;
-   end;
-end;
+   end
+end
 
 % initialize length of numeric body part
 l_fno=length(num2str(fno1));
 l_no=length(num2str(no1));
 
+% check if fileList exists and loop over available names
 if(~isempty(fileList))
     
     % initialize stump index
