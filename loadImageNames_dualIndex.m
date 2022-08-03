@@ -3,24 +3,26 @@ function [outputFileList, filepath] = loadImageNames_dualIndex(startpath)
 %from an interlaced stack, meaning that the images are numbered along two
 %indices, such as time AND z-position
 % SUMMARY: [outputFileList] = loadImageNames()
-% INPUT:    none, user specifies image names
+% INPUT:    startpath: (optional) directory path where to look for images, if 
+%                  this is not specified, the function uses the current
+%                  directory by default
 %           NOTE:   this function is written for a dual index in the image 
 %                   names of the general type
 %                   e.g. 'ProteinXGFP_time001_zpos001'
 %                   where time is the first and zpos the second index
-% OUTPUT:   outputFileList  = cell array of complete image names
+% OUTPUT:   outputFileList: cell array of complete image names
 %                   the results has a double index, where in the
 %                   position outputFileList{n,k}
 %                   n corresponds to the first index (time in the example
 %                   above, and k corresponds to the second index (zpos in
 %                   the example above)
+%           filepath: directory path to the image files given in outputFileList
 %
 % first version 09/05/2010 DLoerke
-
-
     
 %% load first z-stack
 
+% check if the startpath was inputted and change directory to it
 if nargin>0
     cd(startpath);
 end
@@ -42,6 +44,7 @@ oriImageName2 = strcat(filePathI2, fileNameI2);
 %% compile complete file list based on the specified image names
 outputFileList = getFileStackNames_two(oriImageName1,oriImageName2);
 
+% specify filepath to output along with outputFileList
 filepath = filePathI1;
 
 
