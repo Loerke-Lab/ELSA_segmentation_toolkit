@@ -38,12 +38,13 @@ function [path,body,no,ext]=getFilenameBody(fname,separator)
 %
 % original author unknown. regexp formulation implemented by jonas
 
-% initialize
+% initialize arrays
 path = [];
 body = [];
 no = [];
 ext = [];
 
+% if no separator is inputted, make it the default ''
 if nargin < 2
     separator = '';
 end
@@ -51,8 +52,7 @@ end
 % search for extension
 [path,name,ext] = fileparts(fname);
 
-% in the name: search for numbers that are possibly preceeded by the
-% separator
+% in the name: search for numbers that are possibly preceeded by the separator
 [start dummy dummy dummy tokens] = regexp(name, [separator '(\d+)$']);
 if ~isempty(tokens)
     tokens = tokens{1};
