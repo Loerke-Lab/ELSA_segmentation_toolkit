@@ -16,8 +16,12 @@ function [imageFileList] = ELSA_1loadImageList(path, switchvar)
 
 %% PREPARATION AND INITIALIZATION
 
+% specify the default mode to be 0
 mode = 0;
+
+% check if there was more than one input in the function
 if nargin>1
+    % if switchvar was an input, check if it was inputted as 1 and change the mode to 1 instead of 0
     if ~isempty(switchvar)
         if switchvar==1
             mode = 1;
@@ -25,27 +29,27 @@ if nargin>1
     end
 end
 
-
-
-% record original directory (and return to it at the end)
+% record original directory (to return to it at the end)
 od = cd;
 
+% specify the default searchpath to be the original directory the function is run from 
 searchpath = od;
+
+% if path was an input, change the searchpath to be the inputted path
 if nargin>0
     searchpath = path;
 end
    
 % read list of raw image files in the stack with double index; the
 % assumption is that images are named sequentially along the lines of 
-% 'xxxxt001_f001.tif' with a numerical index for time tand for section f
+% 'xxxxt001_f001.tif' with a numerical index for time t and for section f
 [imageFileList, filepath] = loadImageNames_dualIndex(searchpath);
 
 % create a folder for each time point in the Segmentation Data folder
 numframes = size(imageFileList,1);
 numsections = size(imageFileList,2);
 
-
-% invert list (rows vs columns) if necessary
+% invert list (rows vs columns) if necessary (if switchvar is set to 1)
 if mode==1
     for i1 = 1:numframes
         for i2 = 1:numsections
@@ -58,7 +62,9 @@ if mode==1
     numsections = size(imageFileList,2);
 end
 
+% change directory to the filepath (the folder where images are stored)
 cd(filepath);
+
 % if a segmentation results folder doesn't already exist, create one
 if  ~ (exist('SegmentationData')==7) 
     [success, msg, msgID] = mkdir(filepath,'SegmentationData');
@@ -66,9 +72,11 @@ end
 
 % move to segmentation data folder
 cd('SegmentationData');
+
+% record the current directory under SegmentationData
 od2 = cd;
 
-% DEFAULT time and section numbers are set  to min and max available,
+% DEFAULT time and section numbers are set to min and max available,
 % unless different input is specified
 tstart = 1;
 tend = numframes;
@@ -89,7 +97,7 @@ fend = numsections;
 % end
 
 
-% loop over desired time points and create subfolders
+% loop over desired time points and create subfolders in SegmentationData
 for t=tstart:tend
     cframefoldername = sprintf('frame%04d',t);
     if  ~ (exist(cframefoldername)==7) 
@@ -97,6 +105,7 @@ for t=tstart:tend
     end
 end
 
+% return to the original directory
 cd(od);
 
 end % of function
