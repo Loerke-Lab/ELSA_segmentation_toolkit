@@ -24,6 +24,10 @@ function [ImageMatrixFiltered] = filterImage3DpaddedEdges(image, filtername, fil
 %           NOTE 2: The image matrix is padded before filtering to avoid 
 %           edge effects; the padded pixel layer corresponds to filtersize 
 %           in that dimension
+%
+%
+% OUTPUT:   ImageMatrixFiltered: a matrix of the image with the specified
+%           filter applied
 
 
 %% determine filter size
@@ -38,6 +42,8 @@ end
 %% define filter
 
 switch filtername
+    
+    % Rolling average
     case 'ra'
         fdimx = 2*fsx+1; 
         fdimy = 2*fsy+1; 
@@ -45,7 +51,8 @@ switch filtername
         
         cfilter     = ones(fdimx,fdimy,fdimz);
         cfilterNorm = cfilter/sum(cfilter(:));
-        
+       
+    % Gaussian filter    
     case 'Gauss'
         sigmax = fsx; sigmay = fsy; sigmaz = fsz;
         if fsz==0, sigmaz = inf; end
@@ -81,15 +88,17 @@ end
 
 % size of image
 [sx,sy,sz] = size(image);
+
 % size of padded image
 sxp = sx + 2*padx;
 syp = sy + 2*pady;
 szp = sz + 2*padz;
 
+% initialize matrix for ImageMatrixPadded
 ImageMatrixPadded = zeros(sxp,syp,szp);
 
 % fill center
-ImageMatrixPadded(padx+1:padx+sx, pady+1:pady+sy,padz+1:padz+sz) = image;
+ImageMatrixPadded(padx+1:padx+sx,pady+1:pady+sy,padz+1:padz+sz) = image;
 
 % pad x (rows) - pad top rows, then pad bottom rows
 ImageMatrixPadded(1:padx,:,:) = repmat(ImageMatrixPadded(padx+1,:,:),[padx 1 1]);

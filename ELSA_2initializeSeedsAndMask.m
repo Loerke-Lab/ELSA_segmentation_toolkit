@@ -7,13 +7,15 @@ function [] = ELSA_2initializeSeedsAndMask(data,timeFrame)
 % output). If seeds have already been initialized then they will be loaded 
 % and can be edited.
 %
-% INPUT:
-%           data: structure that contains the fields 'ImageFileList' and
+% INPUT:    data: structure that contains the fields 'ImageFileList' and
 %                'Source'.
 %           timeFrame: the time frame to initialize (default is 1)
+%
+% OUTPUT:   No output but the results are saved to the SegmentationData
+%           folder associated with the input time frame
 
 
-% record original directory (and return to it at the end)
+% record original directory (to return to it at the end)
 od = cd;
 
 
@@ -22,7 +24,7 @@ if nargin < 2
     timeFrame = 1;
 end
 
-% load the image 
+% load the image and adjust contrast
 image = imread(data.ImageFileList{timeFrame});
 image = imadjust(image);
 
@@ -31,7 +33,6 @@ image = imadjust(image);
 cd(data.Source)
 cframefoldername = sprintf('SegmentationData/frame%04d',timeFrame);
 cd(cframefoldername);
-
 
 
 % if a seeds.mat file is already present then load it and mask.mat,
@@ -57,13 +58,14 @@ end
 [seeds,mask] = modifySeedsAndMask_ForInitialization(image,seeds,mask);
 
 
-% save to current directory
+% save seeds and mask to current directory
 save('seeds','seeds')
 save('mask','mask')
 
 
 % switch back to original directory
 cd(od)
+
 end
 
 
@@ -105,18 +107,17 @@ edgepixels2 = imageSegmented(1:4,:);
 edgepixels3 = imageSegmented(:,(end-3):end);
 edgepixels4 = imageSegmented((end-3):end,:); 
 edgeLabels = unique( [edgepixels1(:),edgepixels2(:),edgepixels3(:),edgepixels4(:)] );
-for ie=1:length(edgeLabels) % loop through edge labels and set to zero
+
+% loop through edge labels and set to zero
+for ie=1:length(edgeLabels)
     labelvalue = edgeLabels(ie);
-
     imageSegmented(imageSegmented==labelvalue) = 0;
-
 end
 
 % use the segmented label image to create seeds via shrinking
 seeds = bwmorph(imageSegmented>0,'shrink',7);
 
-% a mask of the background is created by the negation of the dilated
-% segments
+% a mask of the background is created by the negation of the dilated segments
 mask = ~imdilate(imageSegmented>0,strel('disk',7));
 
 end
@@ -148,25 +149,26 @@ I = imadjust(I);
 seeds_out = seeds_in;
 mask_out = mask_in;
 
-% generate segmentation to see segmentation overlay along with seeds and
-% mask
+% generate segmentation to see segmentation overlay along with seeds and mask
 [Ifilt] = filterImage3DpaddedEdges(I, 'Gauss', 2);
 imageMasked = imimposemin(Ifilt, seeds_out|mask_out);
 imageSegmented = watershed(imageMasked,8);
 segboundarylines = imageSegmented<1;
+
 %set mask regions to zero
 maskLabels = unique(imageSegmented(mask_out));
 for ii=1:length(maskLabels)
     imageSegmented(imageSegmented==maskLabels(ii)) = 0;
 end
 
-
+% set unsatisfactory to true
 unsatisfactory = true;
+
+% continue to loop while unsatisfactory is true
 while unsatisfactory
     
     % generate an image to show the current state of the seeds, mask, and
-    % segmentation. Seeds in green, mask in blue, and segmentation lines in
-    % red.
+    % segmentation. Seeds in green, mask in blue, and segmentation lines in red.
     imgRGB = repmat(I,1,1,3);
     mask1 = cat(3,segboundarylines,seeds_out,mask_out); 
     mask2 = cat(3,false(size(segboundarylines)),segboundarylines,segboundarylines);
@@ -175,39 +177,49 @@ while unsatisfactory
     imshow(imgRGB,'InitialMagnification',magVal)
     
 
-    % Choose an option for modifying current layer
+    % choose an option for modifying current layer
     choice = menu('Modification:','Done',...
         'Add Polygon Seed','Add Polygon Mask','Remove Polygon',...
         'Remove by Clicking','Re-initialize Seeds','Shrink Seeds','Clear All');
     
+    % execute a statement
     switch choice
-        case 1 % Done
+
+        % Done
+        case 1
             unsatisfactory = false;
             
-            
-        case 2 % Add Polygon Seed
+
+        % Add Polygon Seed
+        case 2
             BW = roipoly();
             title(gca,'Add Polygon Seed','FontSize',16);                
             seeds_out = seeds_out | BW;
             
-            % also if new seed overlaps with mask convert mask region to false 
+            % if new seed overlaps with mask convert mask region to false 
             mask_out(imdilate(BW,SEdisk10)) = false;
-            
-        case 3 % Add Polygon Mask    
+         
+        
+        % Add Polygon Mask    
+        case 3
             BW = roipoly();
             title(gca,'Add Polygon Mask','FontSize',16);                
             mask_out = mask_out | BW;
             
-            % also if new mask overlaps with seed convert seed region to false 
+            % if new mask overlaps with seed convert seed region to false 
             seeds_out(imdilate(BW,SEdisk10)) = false;
             
-        case 4 % Remove Polygon (removes polygon from both seeds and mask)
+
+        % Remove Polygon (removes polygon from both seeds and mask)
+        case 4
             BW = roipoly();
             title(gca,'Remove Polygon','FontSize',16);                
             seeds_out(BW) = false;
             mask_out(BW) = false;
             
-        case 5  % Remove Regions 
+
+        % Remove Regions
+        case 5
             title(gca,'Remove Regions','FontSize',16);
             [y, x] = ginput;
             x = round(x); y = round(y);
@@ -228,18 +240,21 @@ while unsatisfactory
             end
 
          
-        case 6 % Re-initialize seeds and mask
+        % Re-initialize seeds and mask
+        case 6
             [seeds_out,mask_out] = im2seedsAndMask(I,9);
-        case 7 % re-shrink seeds
+
+
+        % Re-shrink seeds
+        case 7
             seeds_out = bwmorph(imageSegmented>0,'shrink',7);
-    
             
             
-        case 8 % clear all
+        case 8 % Clear all
             seeds_out = false(size(I));
             mask_out  = false(size(I));
             
-    end
+    end % of while loop
     
     % after modifications have been made use the new seeds and mask to
     % generate a new segmentation and new "shrunken" seeds
@@ -254,5 +269,8 @@ while unsatisfactory
     
     
 end
+
+% close everything
 close all
+
 end
