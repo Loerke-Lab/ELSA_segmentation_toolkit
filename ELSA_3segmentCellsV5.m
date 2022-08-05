@@ -49,6 +49,7 @@ timeStepSign = sign(tvec(2)-tvec(1));
 % loop over all timepoints given by tvec
 for tidx = 1:length(tvec)
     
+    % specify t for time point in the loop
     t = tvec(tidx);
     
     
@@ -78,8 +79,7 @@ for tidx = 1:length(tvec)
         previousfolder = sprintf('frame%04d',t-timeStepSign);
     end
     
-    % Move to the SegmentationData directory where all segmentation results are
-    % saved
+    % Move to the SegmentationData directory where all segmentation results are saved
     cd(data.Source);
     cd('SegmentationData');
     
@@ -104,8 +104,7 @@ for tidx = 1:length(tvec)
     [ImageSegment,ImageBWlabel,seeds,mask] = wsSegmentSingleImageV5(ImageFiltered,previousSeeds,previousMask);
     
     
-    % Now switch to the folder for the current time frame to save new
-    % results to
+    % Now switch to the folder for the current time frame to save new results to
     cd ..
     cd(currentfolder);
     
@@ -119,11 +118,15 @@ for tidx = 1:length(tvec)
         break
     end 
 
+    % delete the frame number being processed before the next loop
     fprintf('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b');
     
 end % of for t
 
+% enter a new line
 fprintf('\n');
+
+% return to the original directory
 cd(od);
     
 end % of function
@@ -177,8 +180,10 @@ edgepixels2 = imageBWlabel(1:4,:);
 edgepixels3 = imageBWlabel(:,(end-3):end);
 edgepixels4 = imageBWlabel((end-3):end,:);
 maskpixels  = imageBWlabel(mask_in);
+
 %contiguous areas that touch the edge    
 edgeOrMaskAreas = unique( [edgepixels1(:);edgepixels2(:);edgepixels3(:);edgepixels4(:);maskpixels(:)]);
+
 % set these areas to value -1
 for ie=1:length(edgeOrMaskAreas)
     cvalue = edgeOrMaskAreas(ie);
@@ -213,9 +218,9 @@ function [seeds_out,mask_out,exitflag] = modifySeedsAndMaskV5(I,seeds_in,mask_in
 %               break from the parent function.
 %
 % 12/18/12 Timothy Vanderleest
-%  6/28/22 -Added an Undo option which undoes the last change
+%  6/28/22 Added an Undo option which undoes the last change
 
-
+% set magnification value, exitflag default, and structuring element
 magVal = 240;
 exitflag = false;
 SEdisk10   = strel('disk',10);
@@ -229,25 +234,27 @@ seeds_out = seeds_in;
 mask_out = mask_in;
 
 
-% generate segmentation to see segmentation overlay along with seeds and
-% mask
+% generate segmentation to see segmentation overlay along with seeds and mask
 [Ifilt] = filterImage3DpaddedEdges(I, 'Gauss', 2);
 imageMasked = imimposemin(Ifilt, seeds_out|mask_out);
 imageSegmented = watershed(imageMasked,8);
 segboundarylines = imageSegmented<1;
+
 %set mask regions to zero
 maskLabels = unique(imageSegmented(mask_out));
 for ii=1:length(maskLabels)
     imageSegmented(imageSegmented==maskLabels(ii)) = 0;
 end
 
-% initialize RGB image where 2nd and 3rd layers will have seed and mask
-% information
+% initialize RGB image where 2nd and 3rd layers will have seed and mask information
 imgrgb = zeros([size(I),3]);
 
-
+% set unsatisfactory to true
 unsatisfactory = true;
+
+% continue to loop while unsatisfactory is true
 while unsatisfactory
+
     % update translucent RGB image with modseeds and modmask and display
     imgrgb(:,:,1) = 0.4*im2double(segboundarylines)+0.6*I;
     imgrgb(:,:,2) = 0.4*im2double(seeds_out)+0.6*I;
@@ -257,6 +264,7 @@ while unsatisfactory
 %     imshow(imgrgb)
 %     set(gcf,'Position',[141 29 1300 776])
     
+    % add title string if it was an input
     if nargin > 3
         title(titlestr,'FontSize',16)
     end
@@ -268,18 +276,21 @@ while unsatisfactory
         'Remove Polygon','Remove Spot','re-shrink seeds','Undo','Quit');
     
     switch choice
-        case 1 % Save and Quit
+
+        % Save and Quit
+        case 1
             unsatisfactory = false;
             
-         case 2 % Mask to Seed
+
+        % Mask to Seed
+        case 2
             % last seeds and mask for the UNDO option 
-            last_seeds = seeds;
-            last_mask = mask;
+            last_seeds = seeds_in;
+            last_mask = mask_in;
              
-             % this case is designed to make adding seeds super easy by
-             % just a click of the mouse
+            % this case is designed to make adding seeds super easy by
+            % just a click of the mouse
             imshow(imgrgb,'InitialMagnification',magVal); 
-            
             
             % generate fresh seeds and perform watershed
             [i2seeds] = im2seeds(I,9);
@@ -301,19 +312,19 @@ while unsatisfactory
                 end
             end
             
-        case 3 % convert Seed to Mask
+
+        % convert Seed to Mask    
+        case 3
             % last seeds and mask for the UNDO option 
-            last_seeds = seeds;
-            last_mask = mask;
+            last_seeds = seeds_in;
+            last_mask = mask_in;
             
-             % this case is designed to make converting seeds to become
-             % part of the background mask
+            % this case is designed to make converting seeds to become
+            % part of the background mask
             imshow(imgrgb,'InitialMagnification',magVal); 
             title(gca,'Click on Seed to Convert to Mask','FontSize',16);
             [y, x] = ginput;
             x = round(x); y = round(y);
-            
-       
             
             BW = false(size(I));
             for k=1:length(x)
@@ -328,37 +339,44 @@ while unsatisfactory
             mask_out = BW;
             
      
-            
-        case 4 % Add line seed
+        % Add line seed    
+        case 4
             % last seeds and mask for the UNDO option 
-            last_seeds = seeds;
-            last_mask = mask;
+            last_seeds = seeds_in;
+            last_mask = mask_in;
             
             h = imline;
             BW = h.createMask();
             seeds_out = seeds_out | BW;
             
-        case 5 % Add Polygon Seed
+
+        % Add Polygon Seed
+        case 5
             % last seeds and mask for the UNDO option 
-            last_seeds = seeds;
-            last_mask = mask;
+            last_seeds = seeds_in;
+            last_mask = mask_in;
             
             BW = roipoly;
             title(gca,'Add Polygon Seed','FontSize',16);                
             seeds_out = seeds_out | BW;
             
-        case 6 % Add Polygon Mask
+
+        % Add Polygon Mask
+        case 6
             % last seeds and mask for the UNDO option 
-            last_seeds = seeds;
-            last_mask = mask;
+            last_seeds = seeds_in;
+            last_mask = mask_in;
             
             BW = roipoly();
             title(gca,'Add Polygon Mask','FontSize',16);                
             mask_out = mask_out | BW;
-        case 7  % Remove Region 
+
+
+        % Remove Region
+        case 7 
             % last seeds and mask for the UNDO option 
-            last_seeds = seeds;
-            last_mask = mask;
+            last_seeds = seeds_in;
+            last_mask = mask_in;
             
             title(gca,'Click on Regions to Remove','FontSize',16);
             [y, x] = ginput;
@@ -378,10 +396,12 @@ while unsatisfactory
                 end
             end
             
-        case 8 % Remove Polygon (removes polygon from both seeds and mask)
+
+        % Remove Polygon (removes polygon from both seeds and mask)
+        case 8
             % last seeds and mask for the UNDO option 
-            last_seeds = seeds;
-            last_mask = mask;
+            last_seeds = seeds_in;
+            last_mask = mask_in;
             
             BW = roipoly();
             title(gca,'Remove Polygon','FontSize',16);                
@@ -389,11 +409,11 @@ while unsatisfactory
             mask_out(BW) = false;
             
 
-            
-        case 9 % Remove Spot Region
+        % Remove Spot Region    
+        case 9
             % last seeds and mask for the UNDO option 
-            last_seeds = seeds;
-            last_mask = mask;
+            last_seeds = seeds_in;
+            last_mask = mask_in;
             
             imshow(imgrgb,'InitialMagnification',magVal); 
             title(gca,'Click Spot to Remove','FontSize',16);
@@ -405,22 +425,26 @@ while unsatisfactory
             seeds_out(BW) = false;
             mask_out(BW) = false;
             
-         case 10 % re-shrink seeds
+
+        % Re-shrink seeds
+         case 10 
             % last seeds and mask for the UNDO option 
-            last_seeds = seeds;
-            last_mask = mask; 
+            last_seeds = seeds_in;
+            last_mask = mask_in;
              
             seeds_out = bwmorph(imageSegmented>0,'shrink',7);
             
-        case 11 % Undo last change
-            seeds = last_seeds;
-            mask  = last_mask;
+
+        % Undo last change
+        case 11 
+            seeds_out = last_seeds;
+            mask_out  = last_mask;
             
 
-        case 12 % Exit Function
+        % Exit Function
+        case 12 
             exitflag = true;
-            break
-                
+            break         
 
     end
     
@@ -434,7 +458,11 @@ while unsatisfactory
         imageSegmented(imageSegmented==maskLabels(ii)) = 0;
     end
     mask_out = ~imdilate(imageSegmented>0,SEdisk10);
+
+
 end
+
+% close everything
 close all
 end
 
