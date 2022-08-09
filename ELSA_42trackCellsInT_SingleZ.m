@@ -24,14 +24,14 @@ function [ ] = ELSA_42trackCellsInT_SingleZ(data);
 
 %% 
 
-% record original directory (and return to it at the end)
+% record original directory (to return to it at the end)
 od = cd;
 
-
+% specify the path from data structure
 spath = data.Source;
 
 
-   
+% move to source path and SegmentationData folder   
 cd(spath);
 cd('SegmentationData');
 
@@ -40,7 +40,9 @@ t = 1;
 cframefoldername = sprintf('frame%04d',t);
 while exist(cframefoldername)==7
     
-    cd(cframefoldername);      
+    % move to the folder for the current frame
+    cd(cframefoldername);  
+
     % display current progress of processing
     fprintf('extracting @ timepoint %04d',t);
     
@@ -65,13 +67,17 @@ while exist(cframefoldername)==7
     cd(spath);
     cd('SegmentationData');
     
+    % delete message 'extracting @ timepoint %04d' before next loop
     fprintf('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b');
     
 end % of for t-loop
+
+% enter new line
 fprintf('\n');
 
 % return to start directory   
 cd(od); 
+
 % track the subsequent image frame 
 ImageMatrixBWlabel_trackAllT = trackArea2( ImageMatrixBWlabel_T );
 
@@ -79,14 +85,18 @@ ImageMatrixBWlabel_trackAllT = trackArea2( ImageMatrixBWlabel_T );
 % individual ImageMatrixBWlabel matrices for all the values of t, and
 % rename them based on the tracking results
 
+% move to source path and SegmentationData folder
 cd(spath);
 cd('SegmentationData');
+
 % loop over all existing time points
 t = 1;
 cframefoldername = sprintf('frame%04d',t);
 while exist(cframefoldername)==7
     
-    cd(cframefoldername);   
+    % move to the folder for the current frame
+    cd(cframefoldername); 
+
     % display current progress of processing
     fprintf('renaming cells @ timepoint %04d',t);
 
@@ -102,16 +112,20 @@ while exist(cframefoldername)==7
     % update t and folder name
     t=t+1;
     cframefoldername = sprintf('frame%04d',t);
+
     % return to upper folder
     cd(spath);
     cd('SegmentationData');
     
+    % delete message 'renaming cells @ timepoint %04d' before next loop
     fprintf('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b');
 
 end % of for t-loop
 
-
+% enter new line
 fprintf('\n');
+
+% return to start directory
 cd(od);
     
 end % of function

@@ -1,14 +1,21 @@
 function [ matrixBWlabel_track ] = trackArea2( matrixBWlabel, refPlane )
 %trackArea tracks individual cells over space or time using the information
 %from the entire cell area (as opposed to the cell centroid position)
-%INPUT:     matrixBWlabel   = matrix containing cell data; contiguous cell
+% INPUT:     matrixBWlabel   = matrix containing cell data; contiguous cell
 %                               areas are numbered 1-n; cell outlines have
 %                               value 0, and background areas (not used for
 %                               tracking) have value -1
 %           refPlane        = reference plane in matrix used as start point
 %                               for tracking
+%
+% OUTPUT:   matrixBWlabel_track = matrix containing cell data after it has
+%                                 been tracked over space or time
 
+
+% get the dimensions of matrixBWlabel
 [sx,sy,sz] = size(matrixBWlabel);
+
+% check if refPlane was inputted and assign the variable rp
 if nargin<2
     rp = 1;
 else
@@ -24,8 +31,10 @@ for n=1:sz
     np(n) = clp;
     np_max(n) = max(cvalu_n);
 end
-    
+
+% pring message for performing frame-to-frame links
 fprintf(' perform individual frame-to-frame links: ');    
+
 % link from reference plane to top
 for n=rp:sz-1
     
@@ -48,14 +57,18 @@ for n=rp:sz-1
     PointConnections(n).lapy = lapy;
     GlobalConnectionMat(1:length(lapx),n) = lapx;
     
+    % delete previous message before next loop
     fprintf('\b\b\b\b\b\b\b\b\b\b\b\b');
         
 end
+
+% enter new line
 fprintf('\n');
+
 
 % stitch connectivity information together into trackInfo matrix, where
 % rows are continuous trajectories, columns are frames, and the values in
-% the amtrix denote the number of the cell in that frame
+% the matrix denote the number of the cell in that frame
 
 trackInfo = zeros(max(np),sz);
 trackInfo(1:np(1),1) = 1:np(1);
@@ -66,9 +79,13 @@ trackInfo(1:np(1),1) = 1:np(1);
 
 % counter for trajectories
 ct=1;
+
+% print message for compiling closed trajectories
 fprintf('compile list of closed trajectories...');
+
 % loop over all frames
 for c=1:sz-1
+
     % connection values for this frame
     cpos_c = GlobalConnectionMat(:,c);
     %cpos_c1 = GlobalConnectionMat(:,c+1);
@@ -87,19 +104,25 @@ for c=1:sz-1
     % if any positions in this frame need to be linked - otherwise continue
     % to the next frame
     if length(fpos)>0
+
         % loop over all trackable positions
         for r=1:length(fpos)
+
             % index position of current feature
             rpos = fpos(r);
+
             % record startframe for this new trajectory
             traj(ct).startframe = c;
+
             % initialize cell number vector for this trajectory
             traj_novec = rpos;
             
             % initialize moving row index
             ind_r = rpos;
+
             % initialize moving column index
             ind_c = c;
+
             % link for this index
             cval = GlobalConnectionMat(ind_r,ind_c);
             
@@ -109,33 +132,46 @@ for c=1:sz-1
             % frame; if the value of cval is above the number of features,
             % the link is 'empty' and the trajectory ends
             while ( cval <= np_max(ind_c+1) ) 
+
                 % add link to cell number vector
                 traj_novec = [traj_novec cval];
+
                 % set the corresponding value in the GlobalConnectionMat to
                 % zero, to mark this point as already being part of a
                 % trajectory
                 GlobalConnectionMat(ind_r,ind_c) = 0;
+
                 % update row index to the value specified in cval
                 ind_r = cval;
+
                 % increase column index by one
                 ind_c = ind_c+1;
+
                 % break the loop if we have reached the maximum number of
                 % linkable frames
                 if ind_c > sz-1
                     break
                 end
+
                 % otherwise extract the new link for this index
                 cval = GlobalConnectionMat(ind_r,ind_c);
                  
             end
+
             % record the cell number vector
             traj(ct).cellnumbers = traj_novec;
+
             % step up the index for trajectories
             ct = ct+1;
+
         end
     end   
 end
+
+% print total index of trajectories
 fprintf(' - total number = %05d',ct-1);
+
+% enter a new line
 fprintf('\n');
 
 % write trajectories into a mtraix of the trackInfo type
@@ -146,14 +182,16 @@ for c=1:length(traj)
     trackInfo(c,c_startpoint:c_startpoint+length(c_cellnumbers)-1) = c_cellnumbers;
 end
     
-% overwrite numbers in matrixBWlabel with new numbers specified in
-% trackInfo
+% overwrite numbers in matrixBWlabel with new numbers specified in trackInfo
 matrixBWlabel_track = matrixBWlabel;
+
 % display current progress of processing
 fprintf('renumber cells based on links: ');
-    
+
+% loop over the number of trajectories
 for r=1:length(traj)
     
+    % print current trajectory
     fprintf('traj # %05d',r);
     
     c_startpoint = traj(r).startframe;
@@ -171,12 +209,15 @@ for r=1:length(traj)
         end
     end
     
+    % delete message 'traj # %05d' before next loop 
     fprintf('\b\b\b\b\b\b\b\b\b\b\b\b');
 
 end
 
+% delete previous messages
 fprintf('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b');
 
+% enter new line
 fprintf('\n');
 
 end % of function
@@ -192,11 +233,28 @@ end % of function
 
 
 function [overlapMat] = linkFrame2Frame(cplane_n,cplane_np1)
+% this function finds the relative overlap of different cell combinations
+% and saves them in a sparse matrix
+%
+%
+% INPUT:    cplane_n: matrixBWlabel from the current frame (in space or time)
+%                      matrix contains cell data; contiguous cell areas are 
+%                      numbered 1-n; cell outlines have value 0, and background 
+%                      areas (not used for tracking) have value -1
+%           cpane_np1: matrixBWlabel from the next frame (in space or time)
+%                      matrix contains cell data; contiguous cell areas are 
+%                      numbered 1-n; cell outlines have value 0, and background 
+%                      areas (not used for tracking) have value -1
+%
+% OUTPUT:   overlapMat: sparse results matrix containing overlap
+%                       percentages for cell contributions
+%
 
+% find unique values in each of the input matrices
 uval_n = unique(cplane_n(:));
 uval_np1 = unique(cplane_np1(:));
 
-% remove 0 and -1
+% remove 0 and -1 for cell outlines and background
 fpos_n = find( (uval_n==0) | (uval_n==-1) );
 fpos_np1 = find( (uval_np1==0) | (uval_np1==-1) );
 
@@ -208,6 +266,7 @@ if length(fpos_np1)>0
     uval_np1(fpos_n) = [];
 end
 
+% initialize empty results matrix
 overlapMat = [];
 
 if min(length(uval_n),length(uval_np1))>0
@@ -245,10 +304,29 @@ end % of subfunction
         
 
 function [overlapMat] = linkFrame2Frame_ver2(cplane_n,cplane_np1)
+% this function finds the relative overlap of different cell combinations
+% and saves them in a sparse matrix
+%
+%
+% INPUT:    cplane_n: matrixBWlabel from the current frame (in space or time)
+%                      matrix contains cell data; contiguous cell areas are 
+%                      numbered 1-n; cell outlines have value 0, and background 
+%                      areas (not used for tracking) have value -1
+%           cpane_np1: matrixBWlabel from the next frame (in space or time)
+%                      matrix contains cell data; contiguous cell areas are 
+%                      numbered 1-n; cell outlines have value 0, and background 
+%                      areas (not used for tracking) have value -1
+%
+% OUTPUT:   overlapMat: sparse results matrix containing overlap
+%                       percentages for cell contributions
+%
 
+
+% find unique values in each of the input matrices
 uval_n = unique(cplane_n(:));
 uval_np1 = unique(cplane_np1(:));
-% remove 0 and -1
+
+% remove 0 and -1 for cell outlines and background
 fpos_n = find( (uval_n==0) | (uval_n==-1) );
 if length(fpos_n)>0
     uval_n(fpos_n) = [];
@@ -261,14 +339,17 @@ end
 % set unrelevant values (background and edges at -1 and 0) in images to nan
 cplane_n(find(cplane_n<1))=nan;
 cplane_np1(find(cplane_np1<1))=nan;
+
 % for tracking, we only need to consider cells that have some overlap
 % between frames, and cells with zero overlap between the cell areas can be
 % excluded a priori from tracking
 % to determine which cells overlap for this frame combination, we first 
 % combine the values of the two images into a unique value
 ccomb = cplane_n + 1./(1+cplane_np1);
+
 % for unique function, set nans back to zero
 ccomb(find(isnan(ccomb)))=0;
+
 % extract unique values (corresponding to combinations of cell overlaps
 % that exist between the images)
 uvec = unique(ccomb);
@@ -276,6 +357,7 @@ uvec = unique(ccomb);
 % now reconstruct unique combinations of cells from unique numbers
 uvec(find(uvec==0))=[];
 
+% initialize results matrix
 overlapMat = zeros(max(uval_n),max(uval_np1));
 
 for u=1:length(uvec)
@@ -293,19 +375,35 @@ for u=1:length(uvec)
     % write results into conflict resolution matrix
     overlapMat(n1,n2) = uvec2(u,5);
 end
-    
+
+% convert matrix into sparse form
 overlapMat = sparse(overlapMat);
 
 end % of subfunction
         
         
-function [lapx,lapy,connectMatrix] = conflictResolution(overlapMat);
+function [lapx,lapy,connectMatrix] = conflictResolution(overlapMat)
+% this function produces the links between points in two sets of data (A
+% and B for example). It also produces a sparse matrix containing the links 
+% given in these data sets.
+%
+% INPUT:    overlapMat: sparse results matrix containing overlap
+%                       percentages for cell contributions
+%
+%
+% OUTPUT:   lapx: The points A(i) links to B(x(i))
+%           lapy: The points B(j) links to A(y(j))
+%           connectMatrix: a sparse  matrix displaying the links given in 
+%                          lapx and lapy
+%
 
-% revert back to full
+% revert sparse matrix back to full
 overlapMat_use = full(overlapMat);
 [sx,sy] = size(overlapMat_use);
+
 % set zeros (no overlap of areas) to non-link value
 fpos = find(overlapMat_use==0);
+
 % revert overlap values to represent cost
 overlapMat_use = 1-overlapMat_use;
 overlapMat_use(fpos) = -1;
@@ -321,7 +419,11 @@ connectMatrix_extended = 0*overlapMat_extended;
 for i=1:length(lapx)
     connectMatrix_extended(i,lapx(i)) = 1;
 end
+
+% revert connectMatrix from the extented version
 connectMatrix = connectMatrix_extended(1:sx,1:sy);
+
+% convert matrix into sparse form
 connectMatrix = sparse(connectMatrix);
 
 end % of subfunction
