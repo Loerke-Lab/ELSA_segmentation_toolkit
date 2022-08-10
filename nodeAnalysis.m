@@ -1,4 +1,8 @@
 function [dstruct_nodes,dstruct_nodeNodeMat,dstruct_cellCellMat,dstruct_nodeCellMat] = nodeAnalysis(ImageMatrixSegment,cellCentroidStruct,ImageMatrixBWlabel);
+% this function determine nodes in the grid and their cell-neighbor
+% relationships. This gives node positions as well as connectivity of
+% nodes with nodes, cells with cells, and nodes with cells.
+% 
 % Input:    ImageMatrixSegment: 3-dim matrix with segmented images in
 %               subsequent image layers
 %           cellCentroidStruct: structure with cell centroid positions 
@@ -22,7 +26,6 @@ function [dstruct_nodes,dstruct_nodeNodeMat,dstruct_cellCellMat,dstruct_nodeCell
 % loop over number of specified frames
 for z=1:sz
     
-    
     %fprintf(' section %03d',z);
     
     % extract current image
@@ -31,16 +34,18 @@ for z=1:sz
         currentImageBWlabel = ImageMatrixBWlabel(:,:,z);
     end
         
-    %if image is not blank, continue with analysis
+    % if image is not blank, continue with analysis
     fvec=find(currentImage(:)==0);
     
     if length(fvec)>0
         
         % find nodes in image
         [mpm_nodes] = detectNodes_ver2(currentImage);
+
         % add current node positions to nodeStruct
         dstruct_nodes(z).positions = mpm_nodes;
         
+        % create mpm_cells matrix
         mpm_cells = cellCentroidStruct(z).positions;
         
         % based on cell positions and cluster positions, determine which
@@ -52,6 +57,7 @@ for z=1:sz
         else
             [nodeCellMat,nodeNodeMat,cellCellMat] = linkNodesAndcellsV2(mpm_nodes,mpm_cells,currentImage);
         end
+
         dstruct_nodeNodeMat(z).matrix = nodeNodeMat;
         dstruct_cellCellMat(z).matrix = cellCellMat;
         dstruct_nodeCellMat(z).matrix = nodeCellMat;

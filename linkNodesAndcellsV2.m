@@ -1,15 +1,16 @@
 function [nodeCellMat,nodeNodeMat,cellCellMat] = linkNodesAndcellsV2(mpm_nodes,mpm_cells,currentImage);
-%CellsNearNode identifies the cells around all nodes and writes the matric PCCMatrix that houses the position of the node, class of node and cells surrounding the node.
-%
-%	INPUT:  mpm_nodes: mpm with node positions%
+% This function identifies the connections between nodes and cells in an
+% image and outputs matrices for nodes with nodes, cells with cells, and 
+% nodes with cells.
+% 
+%	INPUT:  mpm_nodes: mpm with node positions
 %           mpm_cells: mpm with cell positions
 %           currentImage: segmented image
 %
-%	OUTPUT: nodeCellMat: 2-d matrix with node(row) to cell(columns)
-%               connectivity
+%	OUTPUT: nodeCellMat: 2-d matrix with node(row) to cell(columns) connectivity
 %           nodeNodeMat: 2-d matrix with node to node connectivity
 %           cellCellMat: 2-d matrix with cell to cell connectivity
-
+%
 % Created by: Antonio Nava Jr.
 % Version 1.0 - Last Modified 8/31/10
 % modified 09/17/2010 DL
@@ -17,10 +18,14 @@ function [nodeCellMat,nodeNodeMat,cellCellMat] = linkNodesAndcellsV2(mpm_nodes,m
 
 
 %---Main---
+
+% find the size of the segmented image
 [sx,sy] = size(currentImage);
 
+% find the size of mpm_nodes and mpm_cells
 [num_nodes,ny] = size(mpm_nodes);
 [num_cells,ny2] = size(mpm_cells);
+
 % Note: in node analysis of previously tracked cells, many entries in the
 % mpm-cells matrix may be nan, because the positions refer to cells that
 % appeared in earlier image frames
@@ -32,36 +37,47 @@ num_cells_use = length(fpos_cells);
 % this is done directly with BWlabel
 intMin = min(currentImage(:));
 intMax = max(currentImage(:));
+
+% if the segmented image is not numbered
 if intMax==1
+
+    % create bwimage label matrix
     bwimage = bwlabel(currentImage,8);
+
     % NOTE: any objects that touch the edge of the image are set to value
-    % -1 to mrak them as background - this will ensure in the subsequent
+    % -1 to mark them as background - this will ensure in the subsequent
     % analysis that these cells are not used for direct characterization
     edgepixels1 = currentImage(:,1);
     edgepixels2 = currentImage(1,:);
     edgepixels3 = currentImage(:,sy);
     edgepixels4 = currentImage(sx,:);
     edgeAreas = unique( [edgepixels1(:),edgepixels2(:),edgepixels3(:),edgepixels4(:)] );
+
     for e=1:length(edgeAreas)
         cvalue = edgeAreas(e);
         if cvalue>0
             bwimage(bwimage==cvalue) = -1;
         end
-    end   
+    end  
+
+% if the segmented image is already numbered    
 else
     bwimage = currentImage;
+
 end
 
 % size of area for ring positions
 wsize = 2;
+
 % positions of the pixels in the ring around a square with size wsize
 ringposvec = [1:wsize,wsize*[2:wsize-1],[wsize*wsize:-1:(wsize-1)*wsize+1],1+wsize*[(wsize-2):-1:1]];
 
+% initialize nodeCellMat
 nodeCellMat = zeros(num_nodes,num_cells+1);
 
 % figure; compareInfo2(currentImage, mpm_cells);
 
-   
+% loop over the number of nodes   
 for nn = 1:num_nodes
     
     % local area
@@ -89,11 +105,14 @@ end
 
 
 % find connected nodes and interfacing cells
+% initialize nodeNodeMat and cellCellMat
 nodeNodeMat = zeros(num_nodes,num_nodes);
 cellCellMat = zeros(num_cells,num_cells+1);
 
+% loop over the number of cells
 for nn1=1:num_cells_use-1
     
+    % display current progress of processing
     fprintf(' cell %05d',nn1);
     
     % nodes associated with this cell
@@ -125,7 +144,7 @@ for nn1=1:num_cells_use-1
         % count as being directly connected (IF none of the cells is the
         % background)
        
-        %if length(intersectionNodes)>0
+        % if length(intersectionNodes)>0
         if intersectionLength>0
             
             intersectionNodes = find(intersectionVector);
@@ -147,10 +166,12 @@ for nn1=1:num_cells_use-1
                 
     end % of for nn2
     
+    % delete message 'cell %05d' before next loop
     fprintf('\b\b\b\b\b\b\b\b\b\b\b');
     
 end % of for nn1
-            
+
+% turn full matrices into sparse matrices
 nodeNodeMat = sparse(nodeNodeMat);
 cellCellMat = sparse(cellCellMat);
 nodeCellMat = sparse(nodeCellMat);

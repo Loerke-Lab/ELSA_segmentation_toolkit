@@ -1,6 +1,7 @@
 function [ ] = ELSA_52extractNodes_V2(data, tvec)
 % this function segments the adhesions between cells and the connecting
 % nodes, using the tracking information
+%
 % Input:    data: structure that contains lists of image files (as created by the
 %                   function ELSA_1loadImageList) and the source (or path) to the
 %                   images for each movie. The image file list should be
@@ -11,7 +12,6 @@ function [ ] = ELSA_52extractNodes_V2(data, tvec)
 %
 % Output:   no function output - results are written into the specified
 %           directory
-% Output: filelist
 %
 % 03/05/2011 Dinah Loerke
 % 01/06/2013 minor modifications, Tim Vanderleest
@@ -24,28 +24,30 @@ function [ ] = ELSA_52extractNodes_V2(data, tvec)
 % Note: this function still can handle volumetric images  
 
 %% 
+% record the file name
 filename = 'ImageBWlabel_trackT.mat';
 
-% record original directory (and return to it at the end)
+% record original directory (to return to it at the end)
 od = cd;
 
+% collect information from the data structure
 list = data.ImageFileList;
 spath = data.Source;
 
 
-
 % create a folder for each time point in the Segmentation Data folder
 numframes = size(list,1);
-
 numsections = size(list,2);
 
-fstart = 1;
-fend = numsections;
 
 % DEFAULT time and section numbers are set to min and max available,
 % unless different input is specified
 tstart = 1;
 tend = numframes;
+
+fstart = 1;
+fend = numsections;
+
 tlvec = [tstart:1:tend];
 if nargin>1
     if ~isempty(tvec)
@@ -53,9 +55,11 @@ if nargin>1
     end
 end
 
+
 % loop over all timepoints
 for ti = 1:length(tlvec)
     
+    % specify t inside the loop
     t = tlvec(ti);
     
     % display current progress of processing
@@ -70,18 +74,23 @@ for ti = 1:length(tlvec)
     % upload ImageMatrixSegment 
     loadmat = load('ImageSegment.mat');
     ImageMatrixSegment = loadmat.ImageSegment;
+
     % ...and upload ImageMatrixBWlabel_track if it exists
     if exist(filename)==2
         loadmat = load(filename);
         ImageMatrixBWlabel_use = loadmat.ImageBWlabel_trackT;
     end
     
+    % return to original directory
     cd(od);
     
     % extract position centroids from BWlabel
     for z = fstart:fend
+
         % current image
         cimage = ImageMatrixBWlabel_use(:,:,z);
+        
+        % create a copy and set regions where cimage is -1 to 0 instead
         cimage_copy = cimage;
         cimage_copy(cimage==-1) = 0;
 
@@ -98,6 +107,7 @@ for ti = 1:length(tlvec)
     % automatically saves the results into the current folder
     [dstruct_nodes,dstruct_nodeNodeMat,dstruct_cellCellMat,dstruct_nodeCellMat] = nodeAnalysis(ImageMatrixSegment,dstruct_cellCentroids,ImageMatrixBWlabel_use);
     
+    % move to appropiate timepoint subfolder
     cd(spath);
     cd('SegmentationData');
     cd(cframefoldername);
@@ -109,12 +119,15 @@ for ti = 1:length(tlvec)
     save('dstruct_cellCellMat', 'dstruct_cellCellMat');
     save('dstruct_nodeCellMat', 'dstruct_nodeCellMat');
     
+    % return to original directory
     cd(od);    
        
+    % delete message 'node extraction @ timepoint %04d' before next loop
     fprintf('\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b');
     
 end % of for t
 
+% enter new line
 fprintf('\n');
 
     

@@ -1,11 +1,14 @@
 function [mpm_nodes] = detectNodes_ver2(imageSegm, distanceThreshold);
-%detectNodes detects and classifies the nodes in a line-segmented image
+% detectNodes detects and classifies the nodes in a line-segmented image
+%
 % INPUT:    imageSegm = segmented line image
 %           distanceThreshold (optional) = distance threshold for which nodes
 %               are merged, default value=2 (pixels)
+%
 % OUTPUT:   mpm_nodes = mpm file containing detected nodes; first column =
 %               x-positions, second column y-positions, third column =
 %               class of the node (how many lines are intersecting)
+%
 % last modified: August 20, 2010 DL
 
 
@@ -21,9 +24,11 @@ if length(f0)<length(f1)
     imageSegmSet(f0) = 1;
     imageSegmSet(f1) = 0;
 end % of if
+
+% find locations where segmented lines are
 [fsetx,fsety] = find(imageSegmSet==1);
 
-% set distance threshold to default 2
+% set distance threshold to default 2 unless specified
 if nargin>1
     dthresh = distanceThreshold;
 else
@@ -83,21 +88,21 @@ mpm_nodes = zeros(regmax,3);
 % single node of appropriate class
 for k=1:regmax
     
-    % positions where the BWlabel image has the value corresponding to this
-    % region
+    % positions where the BWlabel image has the value corresponding to this region
     [fregx,fregy] = find(imageBWlabel==k);
     
-    % if the number of pixels is this region equals 1, enter the node into
-    % the list
+    % if the number of pixels is this region equals 1, enter the node into the list
     if length(fregx)==1
         mpm_nodes(k,1:3) = [fregx, fregy, 3];
     
-        % else if there's multiple pixels, check each indiviual pixel belonging
+    % else if there's multiple pixels, check each indiviual pixel belonging
     % to the region separately to determine how many distinct lines are
     % leaving its 5 (plus/minus 2) neighborhood
     else
-               
+
+        % initialize fregLines matrix       
         fregLines = [];
+
         % loop over pixels in this region
         for n=1:length(fregx)
             
@@ -106,26 +111,33 @@ for k=1:regmax
             % extract values in ring positions
             vecRing2 = imageNei2(rpos2);
 
-            % check how many continuous pieces are in the vector (how many steps up
-            % or down)
+            % check how many continuous pieces are in the vector 
+            % (how many steps up or down)
             vecRingDiff2 = diff(vecRing2);
             fp_plus2 = find(vecRingDiff2==1);
             fp_minus2 = find(vecRingDiff2==-1);
+
             % set number of steps as the maximum of up- or downward steps
             nsteps2 = max(length(fp_plus2),length(fp_minus2));
+
             % set result for current center pixel
             fregLines(n) = nsteps2;
+
         end
         
         % x-position for this new cluster: center of gravity of x-positions
         % of the contributing pixels
         cpx = nanmean(fregx);
+
         % y-position for this new cluster: see above
         cpy = nanmean(fregy);
+
         % new class is maximum of contributing classes
         cclass = max(fregLines);
+
         % enter new node into results list
         mpm_nodes(k,1:3) = [cpx, cpy, cclass];
+
     end
     
 end
@@ -155,16 +167,21 @@ distMat = DistanceMatrix(mpm_nodes(:,1:2),mpm_nodes(:,1:2));
 % loop over all currently existing nodes (eahc corresponding to one line in
 % the distance matrix)
 for k=1:size(distMat,1)
+
     % distances from current node
     cdvec = distMat(k,:);
+
     % positions where distances are below threshold distance
     fdist = find(cdvec<=dthresh);
+
     % if any nieghbors are within the threshold
     if length(fdist)>1
+
         % check other positions to determine whether those have additional
         % neighbors within range
         fdist_other = fdist;
         fdist_other(find(fdist==k)) = [];
+
         % number of neighbors (not including the point itself)
         nn_this = length(fdist_other);
         
@@ -182,6 +199,7 @@ for k=1:size(distMat,1)
             fdist2 = find(cdvec2<=dthresh);
             nn_other(j) = length(fdist2);
         end
+
         % if any of the qualifying neighbors have more neighbors
         % themselves, then skip this entry, and wait for the merged node to
         % be calculated for this other neighbor, using its full number of
@@ -195,18 +213,24 @@ for k=1:size(distMat,1)
             % x-position for this new cluster: center of gravity of 
             % x-positions of the contributing pixels
             cpx = nanmean(mpm_nodes(fdist,1));
+
             % same for y-positions
             cpy = nanmean(mpm_nodes(fdist,2));
+
             % merged class: add one for each additional node class above 2
             cclass = 2 + sum(mpm_nodes(fdist,3)-2);
             
             % enter merged result into results file
             mpm_nodes(k,1:3) = [cpx, cpy, cclass];
+
             % ...and delete the neighbors with which this point was merged
             mpm_nodes(fdist_other,1:3) = nan;
             distMat(fdist_other,:) = nan;
+
         end
+
     end % of if
+
 end % of for
         
 
@@ -236,20 +260,31 @@ end % of function
 %%======================================================================
 
 function [m2]=DistanceMatrix(c1,c2);
-%this subfunction makes a neighbour-distance matrix for input matrix c1
-%(n1 x 2 points) and c2
-%output: m2 (n1 x n1) matrix containing the distances of each point in c1 
-%from each point in c2
+%this subfunction makes a neighbour-distance matrix
+% 
+% INPUT:    c1 - matrix (n1 x 2 points)
+%           c2 - matrix (n1 x 2 points)
+%
+% OUTPUT:   m2 - matrix (n1 x n1) containing the distances of each point in 
+%           c1 from each point in c2
 
+% find the size of c1 and c2
 [np1,sd1]=size(c1);
 [np2,sd2]=size(c2);
 
+% initialize results matrix
 m2=zeros(np1,np2);
 
+% loop over the rows of c1 and c2 and 
 for k = 1:np1
     for n = 1:np2
+
+        % calculate the distance
         d = sqrt((c1(k,1)-c2(n,1))^2+(c1(k,2)-c2(n,2))^2);
+
+        % save the results in m2 matrix
         m2(k,n)=d;
+
     end
 end
 
