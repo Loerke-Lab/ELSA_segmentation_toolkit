@@ -1,10 +1,12 @@
 function [ matRes,  trackingMatrixZT, trackingVectorLI] = gridAnalysis_interfaceOrientationNewZT6( path, anglevector, filelist, tvec );
 % gridAnalysis_interfaceOrientation determines the spatial orientation of 
-% interfaces between cells 
-% INPUT:    path:       directory with the image data, which should 
-%                       contain a subfolder called SegmentationData
+% interfaces between cells
+%
+% INPUT:    path:       directory with the image data which is usually stored
+%                       in data structure, should contain a subfolder called SegmentationData
 %           anglevector: bin vector for spatial angles (0=x-axis, 90=
 %                       y-axis)
+%           filelist:   the image file list which is usually stored in data structure
 %           tvec:       vector containing desired first and last frame,
 %                       e.g. [1 10]; default is from first to last
 %                       available frame
@@ -37,14 +39,18 @@ function [ matRes,  trackingMatrixZT, trackingVectorLI] = gridAnalysis_interface
 % record original directory
 od = cd;
 
+% if path was inputted then change directory to the path
 if nargin>0
     if ~isempty(path)
         cd(path);
     end
 end
 
+% set default bins for angle centers and edges
 binvector_angles_centers    = [0:10:360];
 binvector_angles_binedges   = [0:10:360] + 355;
+
+% if anglevector was inputted then change the angle bin centers and edges
 if nargin>1
     if ~isempty(anglevector)
         binvector_angles_centers = anglevector;
@@ -53,13 +59,16 @@ if nargin>1
     end
 end
 
-% change directory to location of segmentation data and record that, too
+% change directory to location of segmentation data and record that too
 cd('SegmentationData');
 od2 = cd;
 
 % loop over all existing time points
+% set the default start and end time
 t_start = 1;
 t_end = length(filelist);
+
+% if tvec was inputted then change the start and end time
 if nargin>3
     if ~isempty(tvec)
         t_start = tvec(1);
@@ -67,6 +76,7 @@ if nargin>3
     end
 end
 
+% specify t and the folder name for while loop
 t = t_start;
 cframefoldername = sprintf('frame%04d',t);
 
@@ -78,8 +88,10 @@ while exist(cframefoldername)==7
     end
     
     % otherwise continue analysis
+    % move to the current folder
     cd(cframefoldername);
     
+    % display current progress of processing
     fprintf('frame %04d',t);
         
     loadstruct = open('dstruct_nodes.mat');
@@ -97,6 +109,7 @@ while exist(cframefoldername)==7
     % loop over all existing sections points
     for k=1:length(nodeNodeStruct)
         
+        % display current progress of processing
         fprintf(' section %04d',k);
         
         % node-node matrix for current section
@@ -107,6 +120,7 @@ while exist(cframefoldername)==7
         ncmat = full(nodeCellStruct(k).matrix);
         % reminder: rows = node numbers; columns = cell numbers        
         
+        % node positions for current section
         nodepos = nodePosStruct(k).positions;
         
         %initialize local results
@@ -141,12 +155,10 @@ while exist(cframefoldername)==7
             % connection distance
             nrad = sqrt( npos_xdiff.^2 + npos_ydiff.^2 );
             
-            % what cells (i.e. with what numbers) meet at these connected
-            % nodes?
+            % what cells (i.e. with what numbers) meet at these connected nodes?
             ncellvec_n = ncmat(cpos,:);
             
-            % now determine the numbers of the two cells that meet at each
-            % interface
+            % now determine the numbers of the two cells that meet at each interface
             ncellno = zeros(1,2);
             for r=1:lpos
                 rpos = find( sum([ncellvec_n0; ncellvec_n(r,:)],1) == 2 );
@@ -172,8 +184,10 @@ while exist(cframefoldername)==7
             % leave column 6 free for theta
             cresults_k(ct+1:ct+lpos,7) = ncellno(:,1);
             cresults_k(ct+1:ct+lpos,8) = ncellno(:,2);
-                       
+            
+            % add to the counter
             ct = ct+lpos;
+
         end % of for n-loop
                
         % extract all x and y vector positions
@@ -187,8 +201,7 @@ while exist(cframefoldername)==7
         fpos_q3 = find( (xall<0) & (yall<=0) );
         fpos_q4 = find( (xall>=0) & (yall<0) );
         
-        %...then calculate the angle in that quadrant using the tan
-        %function
+        %...then calculate the angle in that quadrant using the tan function
         thetaDeg_q1 = atan(yall(fpos_q1)./xall(fpos_q1)) * (360/(2*pi));
         thetaDeg_q2 = 90 + atan(abs(xall(fpos_q2))./yall(fpos_q2)) * (360/(2*pi));
         thetaDeg_q3 = 180 + atan(abs(yall(fpos_q3))./abs(xall(fpos_q3))) * (360/(2*pi));
@@ -196,8 +209,7 @@ while exist(cframefoldername)==7
 %         thetaDeg_q3 = 0 + atan(abs(yall(fpos_q3))./abs(xall(fpos_q3))) * (360/(2*pi));
 %         thetaDeg_q4 = 90 + atan(abs(xall(fpos_q4))./abs(yall(fpos_q4))) * (360/(2*pi));
         
-        % enter the angle (in degrees) into the results matrix (fourth
-        % column)
+        % enter the angle (in degrees) into the results matrix (sixth column)
         cresults_k(fpos_q1,6) = thetaDeg_q1;
         cresults_k(fpos_q2,6) = thetaDeg_q2;
         cresults_k(fpos_q3,6) = thetaDeg_q3;
@@ -217,12 +229,14 @@ while exist(cframefoldername)==7
         
         % enter thresholded binvector into final results matrix
         matRes(t,k,:) = threshVector_k(2,:);
-        
+
+        % delete the current message before the next loop
         fprintf('\b\b\b\b\b\b\b\b\b\b\b\b\b');
         
         % maximal cell number in columns 7 and 8
         maxncell1 = max(cresults_k(:,7));
         maxncell2 = max(cresults_k(:,8));
+
         % for sorting, define linear index from columns 7 and 8 (add 1
         % because of possible zeros)
         linearIndex = sub2ind([maxncell2+1 maxncell1+1], cresults_k(:,8)+1, cresults_k(:,7)+1);
@@ -251,6 +265,8 @@ while exist(cframefoldername)==7
         indices_use = indices_use(indices_use>1);
         
         cresults_ksort_crop = []; % This line fixes the frozen nodes problem. The variable needs to be reinitialized to empty or data from previous frames may remain.
+        
+        % loop over the indices to use and crop the results matrix
         for ci=1:length(indices_use)
             ci_fpos = find(cresults_ksort(:,5)==indices_use(ci));
             cresults_ksort_crop(ci,1) = cresults_ksort(ci_fpos(1),1);
@@ -282,6 +298,7 @@ while exist(cframefoldername)==7
           
         
         %% display results for this time point and frame
+        
         % read original image
         imageOriginalName = char(filelist{t,k});
         imageOriginal = imread(imageOriginalName);
@@ -352,8 +369,10 @@ while exist(cframefoldername)==7
     
     % return to parent directory
     cd(od2);
+
     % step index forward
     t=t+1;
+
     % update folder name for while-loop
     cframefoldername = sprintf('frame%04d',t);
     
@@ -366,13 +385,15 @@ while exist(cframefoldername)==7
         end % of if
     end
    
-    
+    % delete the current message before the next loop
     fprintf('\b\b\b\b\b\b\b\b\b\b');
     
 end % of while loop over frames
 
+% enter new line
 fprintf('\n');
 
+% return to the original directory
 cd(od);
 
 % determine highest available cell number for all available t's and z's
@@ -408,6 +429,7 @@ for z=1:siy
         % column 7:     delta x
         % column 8:     delta y
         
+        % set cmat in the for loop
         cmat = InterfaceData{t,z}.mat;
         % first column: length of interface in pixels
         cc1 = cmat(:,1);
@@ -431,7 +453,7 @@ for z=1:siy
         %linIndex{t,z}.vec = linearIndex;
         
         % for the tracking matrix, we are only interested in interfaces
-        % that have trajectories of more than one frame (for whcih we can
+        % that have trajectories of more than one frame (for which we can
         % determine a delta-d or delta-theta); thus, we will save space by
         % ignoring interfaces that appear in only one frame
         % this is achieved by determining which of the interfaces in this
@@ -439,7 +461,7 @@ for z=1:siy
         
         % for the first frame, the initial ids in frame n-1 are empty, and
         % thus the intersection of interfaces present in frame n-1 and n is
-        % empty,too
+        % empty too
         if t==1
             goodIDs_A = [];
         % for all other frames, since we're counting up t, the intersection
@@ -451,11 +473,16 @@ for z=1:siy
             
         % for frames from t=1 up to t=(six-1), determine ids in frame n+1
         if t<=six-1
+
+            % set cmat_np1 in the if statement
             cmat_np1 = InterfaceData{t+1,z}.mat;
+
             % third column: identifier of first cell
             cc3_np1 = cmat_np1(:,3);
+
             % fourth column: identifier of second cell
             cc4_np1 = cmat_np1(:,4);
+
             % again linearIndex (a combination of cell numbers) is a
             % unique identifier of this particular cell combination
             linearIndex_np1 = sub2ind([totalmax totalmax], cc4_np1, cc3_np1);
@@ -463,6 +490,7 @@ for z=1:siy
             
             % intersection of n-1 and n
             goodIDs_B = intersect(linearIndex, linearIndex_np1);
+
         end % of if
         
         % for final frame, ids in frame n+1 (and thus intersection) are empty 
@@ -487,13 +515,17 @@ for z=1:siy
         % else determine appropriate position (in matrix if linear index
         % value already exists, add to bottom otherwise)
         else
+
             % loop over all entries
             for li=1:length(goodPos)
+
                 % linear index (ID) value of every 'good' trajectory
                 cli = linearIndex(goodPos(li));
+
                 % check if any entries (in previous frames or in previous
                 % layers) already exist for this ID
                 epos = find(trackingVectorLI(:,3)==cli);
+
                 % if no previous entries exist, add the current ID to the
                 % bottom of the trackingVectorLI list, and set that
                 % position as epos
@@ -517,14 +549,17 @@ for z=1:siy
             end % of for li
         end % of if-else    
         
+        % delete the current message before the next loop
         fprintf('\b\b\b\b\b\b\b\b\b\b\b');
                         
     end % of for t
     
+    % delete the current message before the next loop
     fprintf('\b\b\b\b\b\b\b\b\b\b');
     
 end % of for z
 
+% enter new line
 fprintf('\n');
 
 end % of function

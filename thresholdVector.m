@@ -25,7 +25,7 @@ function[threshVector]=thresholdVector(reference,data,binvector,ierror)
 %
 % c: 04/27/2006 Dinah Loerke
 
-% initialize output vector
+% set default error, if error was inputted then change it
 err = 0;
 if nargin>3
     if ierror==1
@@ -33,25 +33,30 @@ if nargin>3
     end
 end
 
+% convert reference and data to double class
 reference = double(reference(:));
 data = double(data(:));
 
-
+% initialize output vector
 threshVector = zeros(2,length(binvector)-1);
 threshVector(:) = nan;
 threshVector(1,:) = binvector(1:length(binvector)-1);
 
+% throw an error if reference and data vector are different lengths
 if (length(reference)~=length(data))
     error('reference and data vector of unequal length');
 end
-    
+
 if length(reference)>0
 
     % check input vectors for orientation; they should be (nx1)
+    % throw errors if the vector format is incorrect
     [checksizx,checksizy]=size(reference);
+
     if (min(checksizx,checksizy)>1)
         error('thresholdVector doesn''t know how to handle this vector format');
     end
+
     if ( checksizx < checksizy )
         referenceS = reference';
     else
@@ -59,9 +64,11 @@ if length(reference)>0
     end
 
     [checksizx,checksizy]=size(data);
+
     if (min(checksizx,checksizy)>1)
         error('thresholdVector doesn''t know how to handle this vector format');
     end
+
     if ( checksizx < checksizy )
         dataS = data';
     else
@@ -69,6 +76,7 @@ if length(reference)>0
     end
     
     usepos = find( isfinite(referenceS) & isfinite(dataS) );
+
     % sort data data according to reference data
     sortMat = sortrows([referenceS(usepos) dataS(usepos)],1);
     referenceSortvec = sortMat(:,1);
@@ -105,21 +113,25 @@ if length(reference)>0
             end
     
         % if a smaller value than the previous exists (i.e. if there are any
-        % values falling isnide this bin), then the data are averaged
+        % values falling inside this bin), then the data are averaged
             if ( binPosVector(b)<binPosVector(b+1) )
                 threshVector(2,b) = nanmean( dataSortvec(binPosVector(b)+1:binPosVector(b+1)) );
                 if err==1
                     threshVector(3,b) = nanstd( dataSortvec(binPosVector(b)+1:binPosVector(b+1)) );
                     threshVector(4,b) = length( [binPosVector(b)+1:binPosVector(b+1)] );
                 end
+
                 % if the value has just dropped to zero, then there are no more
                 % points left for the smaller bins, so the function can stop
                 % calculating now
                 if (binPosVector(b)==0)
                     return
                 end
+
             end % of if
+
         end  %of for b (bins)
+        
     end % of if maxpos is defined
     
 end % of if reference vector isn't empty
