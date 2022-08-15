@@ -1,7 +1,8 @@
 function [] = viewresults(data,imageTypeStr,framedelay,tvec)
-%viewresults(data,pspeed,tvec,type)
-%VIEWRESULTS allows visualization of segmentation results and tracking data
-% Input:    data: structure that contains lists of image files (as created by the
+% viewresults(data,pspeed,tvec,type)
+% VIEWRESULTS allows visualization of segmentation results and tracking data
+
+% INPUT:    data: structure that contains lists of image files (as created by the
 %                   function ELSA_1loadImageList) and the source (or path) to the
 %                   images for each movie. The image file list should be
 %                   stored in data.ImageFileList and the path to the images
@@ -16,11 +17,12 @@ function [] = viewresults(data,imageTypeStr,framedelay,tvec)
 %                   'seg'       - view bw image of segmentation
 %                   'overlay'   - view segmentation lines overlaid on images.
 %                   'seeds'     - view seeds and mask
+% OUTPUT:   
 %
 %
 % T. Vanderleest 6/29/14
 
-% record original directory (and return to it at the end)
+% record original directory (to return to it at the end)
 od = cd;
 
 % imshow magnification value
@@ -46,6 +48,7 @@ end
 % loop over timepoints
 for ti = 1:length(tvec)
     
+    % specify t inside the loop
     t = tvec(ti);
     
     
@@ -125,6 +128,7 @@ for ti = 1:length(tvec)
                 
             
         otherwise
+            % throw a warning if the type of results to view is not correct
             warning('Unexpected type');
             
             
@@ -134,6 +138,7 @@ for ti = 1:length(tvec)
 
     title(['Time frame: ',num2str(t)],'FontSize',16)
     
+    % pause between time points
     if ~isempty(framedelay)
         pause(framedelay);
     else
@@ -141,6 +146,8 @@ for ti = 1:length(tvec)
     end
     
 end
+
+% return to original directory
 cd(od)
 
 end % function
