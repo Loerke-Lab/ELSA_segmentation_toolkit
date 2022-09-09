@@ -17,7 +17,8 @@ function [] = viewresults(data,imageTypeStr,framedelay,tvec)
 %                   'seg'       - view bw image of segmentation
 %                   'overlay'   - view segmentation lines overlaid on images.
 %                   'seeds'     - view seeds and mask
-% OUTPUT:   
+% OUTPUT:   no function output - results are displayed on image for all
+%           time points 
 %
 %
 % T. Vanderleest 6/29/14
