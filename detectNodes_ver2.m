@@ -127,10 +127,12 @@ for k=1:regmax
         
         % x-position for this new cluster: center of gravity of x-positions
         % of the contributing pixels
-        cpx = nanmean(fregx);
+        %cpx = nanmean(fregx);
+        cpx = mean(fregx,'omitnan');
 
         % y-position for this new cluster: see above
-        cpy = nanmean(fregy);
+        %cpy = nanmean(fregy);
+        cpy = mean(fregy,'omitnan');
 
         % new class is maximum of contributing classes
         cclass = max(fregLines);
@@ -212,10 +214,12 @@ for k=1:size(distMat,1)
             
             % x-position for this new cluster: center of gravity of 
             % x-positions of the contributing pixels
-            cpx = nanmean(mpm_nodes(fdist,1));
+            %cpx = nanmean(mpm_nodes(fdist,1));
+            cpx = mean(mpm_nodes(fdist,1),'omitnan');
 
             % same for y-positions
-            cpy = nanmean(mpm_nodes(fdist,2));
+            %cpy = nanmean(mpm_nodes(fdist,2));
+            cpy = mean(mpm_nodes(fdist,2),'omitnan');
 
             % merged class: add one for each additional node class above 2
             cclass = 2 + sum(mpm_nodes(fdist,3)-2);

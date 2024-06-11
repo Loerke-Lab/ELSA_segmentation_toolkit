@@ -115,9 +115,11 @@ if length(reference)>0
         % if a smaller value than the previous exists (i.e. if there are any
         % values falling inside this bin), then the data are averaged
             if ( binPosVector(b)<binPosVector(b+1) )
-                threshVector(2,b) = nanmean( dataSortvec(binPosVector(b)+1:binPosVector(b+1)) );
+                %threshVector(2,b) = nanmean( dataSortvec(binPosVector(b)+1:binPosVector(b+1)) );
+                threshVector(2,b) = mean( dataSortvec(binPosVector(b)+1:binPosVector(b+1)),'omitnan' );
                 if err==1
-                    threshVector(3,b) = nanstd( dataSortvec(binPosVector(b)+1:binPosVector(b+1)) );
+                    %threshVector(3,b) = nanstd( dataSortvec(binPosVector(b)+1:binPosVector(b+1)) );
+                    threshVector(3,b) = std( dataSortvec(binPosVector(b)+1:binPosVector(b+1)),[],'omitnan' );
                     threshVector(4,b) = length( [binPosVector(b)+1:binPosVector(b+1)] );
                 end
 

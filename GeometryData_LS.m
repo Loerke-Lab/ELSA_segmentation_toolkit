@@ -48,7 +48,8 @@ for t=1:Nframes
 
     % load the labeled tracking matrix
     loadTmatrix = load(trackingMatrixFilename);
-    Tmatrix = loadTmatrix.ImageBWlabel; 
+    %Tmatrix = loadTmatrix.ImageBWlabel_trackT;
+    Tmatrix = loadTmatrix.ImageBWlabel;
     
     % Find the unique cell numbers in Tmatrix
     CellNumberst = unique(Tmatrix(:));
@@ -91,6 +92,7 @@ for t=1:Nframes
     cd(framefoldername);
 
     % load the labeled tracking matrix
+    %Tmatrix = load(trackingMatrixFilename).ImageBWlabel_trackT;    
     Tmatrix = load(trackingMatrixFilename).ImageBWlabel;    
     
     % Now loop over all the z-layers to process
@@ -138,6 +140,7 @@ Perimeter(allr,:,:) = [];
 % change back to source directory and up one directory to save data with
 % all other data arrays
 cd(data(MovieNum).Source)
+cd ..
 save('GeometryData','Area','Perimeter','CellNumbers')
 
 % return to original directory

@@ -32,7 +32,8 @@ img = tiffreadVolume(list{1});
 
 % this for loop is for 3D movies, if the movie is only 2D this can be commented out
 for z = 1:size(list,2)
-    img(:,:,z) = imread(list{z,1});
+    %img(:,:,z) = imread(list{z,1});
+    img(:,:,z) = imread(list{1,z});
 end
 
 
